@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Query } from '@nestjs/common';
 import { PlayersService } from './players.service';
 import { DTOplayerId } from './dtos/playerId.dto';
 
@@ -16,8 +16,21 @@ export class PlayersController {
     }
 
     @Get()
-    async listPlayers() {
-        return this.playersService.listAll();
+    async listPlayers(
+        @Query('email') email: string
+    ) {
+        if (email) {
+            return this.playersService.searchByEmail(email);
+        } else {
+            return this.playersService.listAll();
+        }
+    }
+
+    @Delete()
+    async deletePlayer(
+        @Query('email') email: string
+    ) {
+        return this.playersService.deletePlayer(email);
     }
 }
  

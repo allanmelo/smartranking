@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 
 import { DTOplayerId } from './dtos/playerId.dto';
@@ -10,7 +10,7 @@ export class PlayersService {
 
     private players: IPlayer[] = [];
 
-    moldPlayer(playerID: DTOplayerId): IPlayer {
+    moldPlayer(playerID: DTOplayerId) {
         const { email } = playerID;
 
         const knownPlayer = this.players.find( player => player.email === email );
@@ -22,11 +22,28 @@ export class PlayersService {
         }
     };
 
+    searchByEmail(email: string) {
+        const knownPlayer = this.players.find( player => player.email === email );
+        if (!knownPlayer) {
+            throw new NotFoundException (`Jogador não encontrado`)
+        }
+        return knownPlayer;
+    }
+
     listAll(){
         return this.players;
     }
 
-    private create(newPlayer: DTOplayerId): IPlayer {
+    deletePlayer(email: string) {
+        const knownPlayer = this.players.find( player => player.email === email );
+        if (!knownPlayer) {
+            throw new NotFoundException (`Jogador não encontrado`)
+        }
+        this.players = this.players.filter(player => player !== knownPlayer);
+        return `Player ${knownPlayer.name} was deleted.`;
+    }
+
+    private create(newPlayer: DTOplayerId) {
         const { name, email, phone } = newPlayer;
         const player: IPlayer = {
             _id: uuidv4(),

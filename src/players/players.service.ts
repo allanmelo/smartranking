@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 
-import { DTOcreatePlayer } from './dtos/createPlayer.dto';
+import { DTOplayerId } from './dtos/playerId.dto';
 import { IPlayer } from './interfaces/player.interface';
 
 @Injectable()
@@ -10,17 +10,24 @@ export class PlayersService {
 
     private players: IPlayer[] = [];
 
-    async moldPlayer(createPlayer: DTOcreatePlayer): Promise<IPlayer> {
-        const player = await this.create(createPlayer);
-        return player;
+    moldPlayer(playerID: DTOplayerId): IPlayer {
+        const { email } = playerID;
+
+        const knownPlayer = this.players.find( player => player.email === email );
+
+        if (knownPlayer) {
+            return this.update(knownPlayer, playerID);
+        } else {
+            return this.create(playerID);
+        }
     };
 
-    async listPlayers(){
+    listAll(){
         return this.players;
     }
 
-    private create(createPlayer: DTOcreatePlayer): IPlayer {
-        const { name, email, phone } = createPlayer;
+    private create(newPlayer: DTOplayerId): IPlayer {
+        const { name, email, phone } = newPlayer;
         const player: IPlayer = {
             _id: uuidv4(),
             email,
@@ -30,9 +37,15 @@ export class PlayersService {
             ranking: "A",
             rankingStats: 1
         };
-        this.logger.log(`createPlayer: ${JSON.stringify(player)}`);
+        this.logger.log(`newPlayer: ${JSON.stringify(player)}`);
         this.players.push(player);
         return player;
+    }
+
+    private update(knownPlayer: IPlayer, newPlayerInfo: DTOplayerId) {
+        const { name } = newPlayerInfo;
+        knownPlayer.name = name;
+        return knownPlayer;
     }
 
 }

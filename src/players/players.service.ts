@@ -1,9 +1,10 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 // import { v4 as uuidv4 } from 'uuid';
 
-import { DTOplayerId } from './dtos/playerId.dto';
+import { DTOcreatePlayer } from './dtos/createPlayer.dto';
+import { DTOupdatePlayer } from './dtos/updatePlayer.dto';
 import { IPlayer } from './interfaces/player.interface';
 
 @Injectable()
@@ -13,94 +14,65 @@ export class PlayersService {
     
     private readonly logger = new Logger(PlayersService.name);
 
-    // private players: IPlayer[] = [];
+    async create(newPlayer: DTOcreatePlayer) {
 
-    async moldPlayer(playerID: DTOplayerId) {
+        const { email } = newPlayer;
 
-        const { email } = playerID;
-
-        // const knownPlayer = this.players.find( player => player.email === email );
         const knownPlayer = await this.playerModel.findOne({email}).exec();
 
-        if (!!knownPlayer) {
-            return this.update(playerID);
-        } else {
-            return this.create(playerID);
+        if (knownPlayer) {
+            throw new BadRequestException(`O email ${email} está associado a um jogador já cadastrado`)
         }
+        
+        const player = new this.playerModel(newPlayer);
+        
+        return await player.save();
+
     };
 
-   async searchByEmail(email: string) {
+    async update(_id: string, registeredPlayer: DTOupdatePlayer) {
 
-        // const knownPlayer = this.players.find( player => player.email === email );
-        const knownPlayer = await this.playerModel.findOne({email}); 
+        const knownPlayer = await this.playerModel.findOne({_id}).exec();
 
         if (!knownPlayer) {
-            throw new NotFoundException (`Jogador não encontrado`)
+            throw new NotFoundException(`Jogador com id ${_id} não encontrado`)
+        }
+
+        await this.playerModel.findOneAndUpdate( {_id}, {$set: registeredPlayer} ).exec();
+
+        return await this.playerModel.findOne({_id}).exec();
+    
+    };
+
+   async searchById(_id: string) {
+
+        const knownPlayer = await this.playerModel.findOne({_id}); 
+
+        if (!knownPlayer) {
+            throw new NotFoundException (`Jogador com ${_id} não foi encontrado`)
         }
         return knownPlayer;
+
     }
 
     async listAll(){
+
         return await this.playerModel.find().exec();
-        // return this.players;
+
     }
 
-    async deletePlayer(email: string) {
+    async delete(_id: string) {
 
-        const deletedPlayer = await this.playerModel.findOneAndDelete({email}).exec();
-
-        /* const knownPlayer = this.players.find( player => player.email === email );
-        const knownPlayer = await this.playerModel.findOne({email}); 
+        const knownPlayer = await this.playerModel.findOne({_id});
 
         if (!knownPlayer) {
-            throw new NotFoundException (`Jogador não encontrado`)
+            throw new NotFoundException (`Jogador com ${_id} não foi encontrado`)
         }
         
-        this.players = this.players.filter(player => player !== knownPlayer); */
-
-        return `Player ${deletedPlayer.name} was deleted.`;
-    }
-
-    private async create(newPlayer: DTOplayerId) {
-
-        const player = new this.playerModel(newPlayer);
-        return await player.save();
-
-
-        /* const { name, email, phone } = newPlayer;
-        const player: IPlayer = {
-            _id: uuidv4(),
-            email,
-            name,
-            phone,
-            photoUrl: "https://images.unsplash.com/photo-1583275478661-1c31970669fa?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=668&q=80",
-            ranking: "A",
-            rankingStats: 1
-        };
-        this.logger.log(`newPlayer: ${JSON.stringify(player)}`);
-        this.players.push(player); 
-        return player; */
-    }
-
-    private async update(newPlayerInfo: DTOplayerId) {
-
-        const { email } = newPlayerInfo;
-
-        const oldInfo = await this.playerModel.findOneAndUpdate(
-            {email}, {$set: newPlayerInfo}
-            ).exec();
-
-        const newInfo = await this.playerModel.findOne({email}).exec();
+        const deletedPlayer = await this.playerModel.deleteOne({_id}).exec();
         
-        if (newInfo !== oldInfo) {
-            return newInfo
-        } else {
-            throw new Error('Try again')
-        }        
+        return `Player ${knownPlayer.name} was deleted.`
 
-        /* const { name } = newPlayerInfo;
-        knownPlayer.name = name;
-        return knownPlayer; */
     }
 
 }
